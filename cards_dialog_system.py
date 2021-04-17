@@ -98,21 +98,35 @@ class Dialog(Dialog):
                         first = result.karta.first
                         self.state.push(first_card=first)
                         self.state.expect(self.state.disambig, self.state.first_card)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        first = result.karta.first
-                        self.state.push(first_card=first)
-                        continue
-
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.first_card.first and result.karta.first):
+                                # vyresena inkonzistence
+                                first = result.karta.first
+                                self.state.push(first_card=first)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít první karta.")
+                                continue
+                        
                     if not result.first_card.first and result.second_card.first:
                         # znova recena druha karta
                         second = result.karta.first
                         self.state.push(second_card=second)
                         self.state.expect(self.state.disambig, self.state.second_card)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        second = result.karta.first
-                        self.state.push(second_card=second)
-                        continue
-
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.second_card.first and result.karta.last):
+                                # vyresena inkonzistence
+                                second = result.karta.first
+                                self.state.push(second_card=second)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít druhá karta.")
+                                continue
+                        
                     if result.first_card.first and result.second_card.first:
                         # znova receny obe karty
                         first = result.karta.first
@@ -211,20 +225,34 @@ class Dialog(Dialog):
                                 first = result.karta.first
                                 self.state.push(first_card=first)
                                 self.state.expect(self.state.disambig, self.state.first_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                first = result.karta.first
-                                self.state.push(first_card=first)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.first_card.first and result.karta.first):
+                                        # vyresena inkonzistence
+                                        first = result.karta.first
+                                        self.state.push(first_card=first)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít první karta.")
+                                        continue
 
                             if not result.first_card.first and result.second_card.first:
                                 # znova recena druha karta
                                 second = result.karta.first
                                 self.state.push(second_card=second)
                                 self.state.expect(self.state.disambig, self.state.second_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                second = result.karta.first
-                                self.state.push(second_card=second)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.second_card.first and result.karta.first):
+                                        # vyresena inkonzistence
+                                        second = result.karta.first
+                                        self.state.push(second_card=second)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít druhá karta.")
+                                        continue
 
                             if result.first_card.first and result.second_card.first:
                                 # znova receny obe karty
@@ -232,11 +260,18 @@ class Dialog(Dialog):
                                 second = result.karta.last
                                 self.state.push(first_card= first, second_card=second)
                                 self.state.expect(self.state.disambig, self.state.first_card, self.state.second_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values} a pro druhou kartu {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                first = result.karta.first
-                                second = result.karta.last
-                                self.state.push(first_card=first, second_card=second)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values} a pro druhou kartu {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.first_card.first and result.karta.first and result.second_card.first and result.karta.last):
+                                        # vyresena inkonzistence
+                                        first = result.karta.first
+                                        second = result.karta.last
+                                        self.state.push(first_card=first, second_card=second)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu mají mít obě karty.")
+                                        continue
 
                             if result.command.first:
                                 # rozpoznan prikaz
@@ -318,20 +353,34 @@ class Dialog(Dialog):
                                 first = result.karta.first
                                 self.state.push(first_card=first)
                                 self.state.expect(self.state.disambig, self.state.first_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                first = result.karta.first
-                                self.state.push(first_card=first)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.first_card.first and result.karta.first):
+                                        # vyresena inkonzistence
+                                        first = result.karta.first
+                                        self.state.push(first_card=first)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít první karta.")
+                                        continue
 
                             if not result.first_card.first and result.second_card.first:
                                 # znova recena druha karta
                                 second = result.karta.first
                                 self.state.push(second_card=second)
                                 self.state.expect(self.state.disambig, self.state.second_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                second = result.karta.first
-                                self.state.push(second_card=second)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro druhou kartu jste již řekl {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.second_card.first and result.karta.first):
+                                        # vyresena inkonzistence
+                                        second = result.karta.first
+                                        self.state.push(second_card=second)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má mít druhá karta.")
+                                        continue
 
                             if result.first_card.first and result.second_card.first:
                                 # znova receny obe karty
@@ -339,11 +388,18 @@ class Dialog(Dialog):
                                 second = result.karta.last
                                 self.state.push(first_card= first, second_card=second)
                                 self.state.expect(self.state.disambig, self.state.first_card, self.state.second_card)
-                                result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values} a pro druhou kartu {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                                first = result.karta.first
-                                second = result.karta.last
-                                self.state.push(first_card=first, second_card=second)
-                                continue
+                                while True:
+                                    result = await self.synthesize_and_wait_for_slu_result(text=f"Pro první kartu jste již řekl {self.state.first_card.all_values} a pro druhou kartu {self.state.second_card.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                                    if (result.first_card.first and result.karta.first and result.second_card.first and result.karta.last):
+                                        # vyresena inkonzistence
+                                        first = result.karta.first
+                                        second = result.karta.last
+                                        self.state.push(first_card=first, second_card=second)
+                                        break
+                                    else:
+                                        # nebylo nic rozpoznano
+                                        await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu mají mít obě karty.")
+                                        continue
 
                             if result.command.first:
                                 # rozpoznan prikaz

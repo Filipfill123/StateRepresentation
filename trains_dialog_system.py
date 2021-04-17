@@ -75,6 +75,9 @@ class Dialog(Dialog):
                 if command == "end":
                     await self.synthesize_and_wait(text=f"Rozpoznán příkaz konec. Ukončuji dialog.")
                     end = True
+                    self.state.push()
+                    self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                    self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                     break
                 elif command == "help":
                     await self.synthesize_and_wait(text=f"Rozpoznán příkaz pomoct. Vyhledám pro vás vlakové spojení. Řeknětě z jakého města a do jakého města chcete jet.")
@@ -126,22 +129,34 @@ class Dialog(Dialog):
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station)
                         self.state.expect(self.state.disambig, self.state.from_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici okud jste již řekl {self.state.from_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        from_station = result.from_station.first
-
-                        self.state.push(from_station=from_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.from_station.first):
+                                # vyresena inkonzistence
+                                from_station = result.from_station.first
+                                self.state.push(to_station=from_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice odkud mít.")
+                                continue
 
                     if not result.from_station.first and result.to_station.first:
                         # znova receno kam
-                        
                         to_station = result.to_station.first
                         self.state.push(to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        to_station = result.to_station.first
-                        self.state.push(to_station=to_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                self.state.push(to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice do mít.")
+                                continue
 
                     if result.from_station.first and result.to_station.first:
                         # znova z a kam
@@ -149,12 +164,19 @@ class Dialog(Dialog):
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station, to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.from_station, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        to_station = result.to_station.first
-                        from_station = result.from_station.first
-                        self.state.push(from_station=from_station, to_station=to_station)
-                        continue
-                            
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.from_station.first and result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                from_station = result.from_station.first
+                                self.state.push(from_station=from_station, to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu mají stanice mít.")
+                                continue
+                                                    
                     if result.command.first:
                         # rozpoznan prikaz
                         command = result.command.first
@@ -164,6 +186,8 @@ class Dialog(Dialog):
                             await self.synthesize_and_wait(text=f"Rozpoznán příkaz konec. Ukončuji dialog.")
                             end = True
                             self.state.push()
+                            self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                            self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                             break
                         elif command == "help":
                             # command help
@@ -188,9 +212,9 @@ class Dialog(Dialog):
 
                 while True:
                     if train_type == "ANY":       
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value} do města {self.state.to_station.first_value}. Chcete potvrdit tyto údaje?", timeout=4.)
+                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value}. Do jakého města chcete jet?", timeout=4.)
                     else:
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value} do města {self.state.to_station.first_value} vlakem typu {train_types[self.state.train_type.first_value]}. Chcete potvrdit tyto údaje?", timeout=4.)
+                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value} vlakem typu {train_types[self.state.train_type.first_value]}. Do jakého města chcete jet?", timeout=4.)
                     if result.from_station.first:
                         # znovu receno z
                         from_station = result.from_station.first
@@ -207,6 +231,7 @@ class Dialog(Dialog):
                                 # nebylo nic rozpoznano
                                 await self.synthesize_and_wait(text=f"Neřekl jste žádnou stanici.")
                                 continue
+
                     if result.to_station.first:
                         # receno kam
                         to_station = result.to_station.first
@@ -233,27 +258,42 @@ class Dialog(Dialog):
                         # nepotvrzeny
                         await self.synthesize_and_wait(text=f"Nechcete potvrdit odjezd z města {self.state.from_station.first_value} do města {self.state.to_station.first_value}. Údaje budou smazány.")
                         self.state.push()
-                        self.state.delete_state_representation()
+                        self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                        self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                         break
                     if result.from_station.first and not result.to_station.first:
                         # znova receno odkud
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station)
                         self.state.expect(self.state.disambig, self.state.from_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        from_station = result.from_station.first
-                        self.state.push(from_station=from_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                self.state.push(to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice do mít.")
+                                continue
 
                     if not result.from_station.first and result.to_station.first:
                         # znova receno kam
                         to_station = result.to_station.first
                         self.state.push(to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        to_station = result.to_station.first
-                        self.state.push(to_station=to_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                self.state.push(to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice do mít.")
+                                continue
 
                     if result.from_station.first and result.to_station.first:
                         # znova receno z a kam
@@ -261,11 +301,18 @@ class Dialog(Dialog):
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station, to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.from_station, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        to_station = result.to_station.first
-                        from_station = result.from_station.first
-                        self.state.push(from_station=from_station, to_station=to_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.from_station.first and result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                from_station = result.from_station.first
+                                self.state.push(from_station=from_station, to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu mají stanice mít.")
+                                continue
 
                     if result.command.first:
                         # rozpoznan prikaz
@@ -276,6 +323,8 @@ class Dialog(Dialog):
                             await self.synthesize_and_wait(text=f"Rozpoznán příkaz konec. Ukončuji dialog.")
                             end = True
                             self.state.push()
+                            self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                            self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                             break
                         elif command == "help":
                             # command help
@@ -287,7 +336,6 @@ class Dialog(Dialog):
                             continue
                                 
             if not result_1.from_station.first and result_1.to_station.first:
-                print("jedno kam", result_1.to_station.first)
                 # receno pouze kam
                 to_station = result_1.to_station.first
                 self.state.push(to_station=to_station)
@@ -300,9 +348,9 @@ class Dialog(Dialog):
 
                 while True:
                     if train_type == "ANY":       
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value} do města {self.state.to_station.first_value}. Chcete potvrdit tyto údaje?", timeout=4.)
+                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet do města {self.state.to_station.first_value}. Z jakého města chcete jet?", timeout=4.)
                     else:
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet z města {self.state.from_station.first_value} do města {self.state.to_station.first_value} vlakem typu {train_types[self.state.train_type.first_value]}. Chcete potvrdit tyto údaje?", timeout=4.)
+                        result = await self.synthesize_and_wait_for_slu_result(text=f"Chcete jet do města {self.state.to_station.first_value} vlakem typu {train_types[self.state.train_type.first_value]}. Z jakého města chcete jet?", timeout=4.)
                     if result.to_station.first:
                         # znovu receno kam
                         to_station = result.to_station.first
@@ -329,7 +377,7 @@ class Dialog(Dialog):
                     if result.confirm.first:
                         self.state.expect(self.state.confirm_unconfirmed, self.state.from_station, self.state.to_station, self.state.train_type, self.state.time)
                         self.state.push(self.state.from_station, self.state.to_station, self.state.train_type, self.state.time)
-                        # byly potvrzeno potvrzeny
+                        # byly potvrzeny
                         self.state.expect(self.state.present, self.state.from_station, self.state.to_station, self.state.train_type, self.state.time)
                         found_train = find_train(self.state.from_station.first_value, self.state.to_station.first_value, self.state.time.first_value, self.state.train_type.first_value, self.trains)
                         if found_train:
@@ -345,30 +393,42 @@ class Dialog(Dialog):
                         # nepotvrzeny
                         await self.synthesize_and_wait(text=f"Nechcete potvrdit odjezd z města {self.state.from_station.first_value} do města {self.state.to_station.first_value} vlakem typu {train_types[self.state.train_type.first_value]}. Údaje budou smazány.")
                         self.state.push()
-                        self.state.delete_state_representation()
+                        self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                        self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                         break
                     if result.from_station.first and not result.to_station.first:
                         # znova receno odkud
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station)
                         self.state.expect(self.state.disambig, self.state.from_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        from_station = result.from_station.first
-
-                        self.state.push(from_station=from_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                self.state.push(to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice do mít.")
+                                continue
 
                     if not result.from_station.first and result.to_station.first:
                         # znova receno kam
                         to_station = result.to_station.first
                         self.state.push(to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        for key, value in to_stations.items():  
-                            if result.to_station.first in to_stations[key]:
-                                to_station = key
-                        self.state.push(to_station=to_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici do jste již řekl {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                self.state.push(to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu má stanice do mít.")
+                                continue
 
                     if result.from_station.first and result.to_station.first:
                         # znova receno z a kam
@@ -376,11 +436,18 @@ class Dialog(Dialog):
                         from_station = result.from_station.first
                         self.state.push(from_station=from_station, to_station=to_station)
                         self.state.expect(self.state.disambig, self.state.from_station, self.state.to_station)
-                        result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
-                        to_station = result.to_station.first
-                        from_station = result.from_station.first
-                        self.state.push(from_station=from_station, to_station=to_station)
-                        continue
+                        while True:
+                            result = await self.synthesize_and_wait_for_slu_result(text=f"Pro stanici odkud jste již řekl {self.state.from_station.all_values} a pro stanici do {self.state.to_station.all_values}. Musíte z nich vybrat jednu. Jaká je vaše odpověď?", timeout=4.)
+                            if (result.from_station.first and result.to_station.first):
+                                # vyresena inkonzistence
+                                to_station = result.to_station.first
+                                from_station = result.from_station.first
+                                self.state.push(from_station=from_station, to_station=to_station)
+                                break
+                            else:
+                                # nebylo nic rozpoznano
+                                await self.synthesize_and_wait(text=f"Neřekl jste, jakou hodnotu mají stanice mít.")
+                                continue
 
                     if result.command.first:
                         # rozpoznan prikaz
@@ -391,6 +458,8 @@ class Dialog(Dialog):
                             await self.synthesize_and_wait(text=f"Rozpoznán příkaz konec. Ukončuji dialog.")
                             end = True
                             self.state.push()
+                            self.state.expect(self.state.emptying_slots, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
+                            self.state.push(self.state.empty_slots_fcn, self.state.from_station, self.state.to_station, self.state.time, self.state.train_type)
                             break
                         elif command == "help":
                             # command help

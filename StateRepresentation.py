@@ -280,6 +280,24 @@ class Slot:
         """
         self.__value = None
         self.__state = None
+        self.__first_value = None
+        self.__last_value = None
+
+    @property
+    def first_value(self):
+        """Returns __first_value
+
+        """
+
+        return self.__first_value
+
+    @property
+    def last_value(self):
+        """Returns __last_value
+
+        """
+
+        return self.__last_value
 
     @property
     def value(self):
@@ -311,8 +329,8 @@ class Slot:
                 self.__value.append(input_value)
                 self.__value.sort(key=lambda x: x.value_confidence['confidence'], reverse=True)
                 self.__state = 'inconsistent'
-            self.first_value = self.__value[0].value_confidence['value']
-            self.last_value = self.__value[-1].value_confidence['value']
+            self.__first_value = self.__value[0].value_confidence['value']
+            self.__last_value = self.__value[-1].value_confidence['value']
         else:
             print("Value not valid!")
 
