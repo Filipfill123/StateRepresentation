@@ -4,7 +4,7 @@ import datetime
 import random
 import asyncio
 import logging
-from train_creater import create_trains, find_train
+from train_creator import create_trains, find_train
 from StateRepresentation import State, Value, Slot, Station, TraintypeEnum, TimeValue
 
 class Dialog(Dialog):
